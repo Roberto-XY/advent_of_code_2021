@@ -22,7 +22,8 @@ defmodule AdventOfCode.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:rustler, "~> 0.22.2"}
+      {:rustler, "~> 0.22.2"},
+      {:dialyxir, "~> 1.1", only: [:dev], runtime: false}
     ]
   end
 end
