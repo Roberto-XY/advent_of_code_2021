@@ -4,8 +4,8 @@ defmodule Day1 do
   @spec read_input! :: Enumerable.t()
   def read_input!() do
     File.stream!(Path.join(:code.priv_dir(:advent_of_code), "input/day_1.txt"))
-    |> Stream.map(fn x ->
-      {res, _} = Integer.parse(x)
+    |> Stream.map(fn line ->
+      {res, _} = Integer.parse(line)
       res
     end)
   end
