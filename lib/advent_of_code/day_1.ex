@@ -4,22 +4,13 @@ defmodule Day1 do
   @spec read_input! :: Enumerable.t()
   def read_input!() do
     File.stream!(Path.join(:code.priv_dir(:advent_of_code), "input/day_1.txt"))
-    |> Stream.map(fn line ->
-      {res, _} = Integer.parse(line)
-      res
-    end)
+    |> Stream.map(&String.to_integer(String.trim(&1)))
   end
 
   @spec solve_1(Enumerable.t()) :: integer()
   def solve_1(enum \\ @example_input) do
     Stream.chunk_every(enum, 2, 1, :discard)
-    |> Enum.reduce(0, fn [first, second], acc ->
-      if first < second do
-        acc + 1
-      else
-        acc
-      end
-    end)
+    |> Enum.count(fn [first, second] -> first < second end)
   end
 
   @spec solve_2(Enumerable.t()) :: integer()

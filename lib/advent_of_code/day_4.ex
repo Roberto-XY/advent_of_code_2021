@@ -21,6 +21,7 @@ defmodule Day4 do
   2  0 12  3  7
   """
 
+  # brute force, no bingo state tracking
   defmodule BingoBoard do
     @type square :: %{number: integer(), crossed_out: boolean()}
 
@@ -88,8 +89,6 @@ defmodule Day4 do
     end
   end
 
-  @type direction() :: :forward | :down | :up
-
   @spec read_input!() :: %{numbers: [integer()], boards: [BingoBoard.t()]}
   def read_input!() do
     File.read!(Path.join(:code.priv_dir(:advent_of_code), "input/day_4.txt"))
@@ -102,10 +101,7 @@ defmodule Day4 do
 
     numbers =
       String.split(numbers, ",", trim: true)
-      |> Enum.map(fn s ->
-        {res, _} = Integer.parse(s)
-        res
-      end)
+      |> Enum.map(&String.to_integer(String.trim(&1)))
 
     boards =
       String.split(boards, "\n\n", trim: false)
@@ -113,10 +109,7 @@ defmodule Day4 do
         String.split(board, "\n", trim: true)
         |> Enum.map(fn row ->
           String.split(row, " ", trim: true)
-          |> Enum.map(fn s ->
-            {res, _} = Integer.parse(s)
-            res
-          end)
+          |> Enum.map(&String.to_integer(String.trim(&1)))
         end)
       end)
       |> Enum.map(fn board ->
