@@ -72,7 +72,7 @@ defmodule Day8 do
   @spec solve!() :: String.t()
   def solve!() do
     read_input!()
-    |> Stream.map(&parse_input_line(String.trim(&1)))
+    |> Stream.map(&parse_input_line/1)
     |> then(&%{res_1: solve_1(&1), res_2: solve_2(&1)})
     |> then(fn
       %{res_1: 504, res_2: 1_073_431} -> IO.inspect("Success on #{__MODULE__}")
@@ -85,7 +85,7 @@ defmodule Day8 do
 
   @spec parse_input_line(binary) :: {[MapSet.t()], [MapSet.t()]}
   def parse_input_line(input) when is_binary(input) do
-    [signal_pattern, output_value] = String.split(input, "|", trim: true)
+    [signal_pattern, output_value] = String.trim(input) |> String.split("|", trim: true)
     signal_patterns = String.split(signal_pattern, " ", trim: true)
     output_values = String.split(output_value, " ", trim: true)
 
