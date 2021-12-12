@@ -35,10 +35,12 @@ defmodule Day12 do
     end)
   end
 
+  @spec solve_1(%{optional(binary) => [binary]}) :: non_neg_integer
   def solve_1(cave_system) do
     enumerate_paths_1(cave_system) |> length()
   end
 
+  @spec enumerate_paths_1(%{binary => [binary]}, [binary], binary, [[binary]]) :: [[binary]]
   def enumerate_paths_1(cave_system, path \\ ["start"], current_cave \\ "start", acc \\ [])
 
   def enumerate_paths_1(_, path, "end", acc) do
@@ -59,10 +61,14 @@ defmodule Day12 do
     end)
   end
 
+  @spec solve_2(%{optional(binary) => [binary]}) :: non_neg_integer
   def solve_2(cave_system) do
     enumerate_paths_2(cave_system) |> length()
   end
 
+  @spec enumerate_paths_2(%{binary => [binary]}, boolean(), [binary], binary, [[binary]]) :: [
+          [binary]
+        ]
   def enumerate_paths_2(
         cave_system,
         small_cave_visited_twice? \\ false,
@@ -95,10 +101,12 @@ defmodule Day12 do
     end)
   end
 
+  @spec small_cave?(binary) :: boolean
   def small_cave?(cave) do
     String.first(cave) |> String.downcase() == String.first(cave)
   end
 
+  @spec cave_visited?([String.t()], String.t()) :: boolean
   def cave_visited?(path, cave) do
     Enum.any?(path, &(&1 == cave))
   end
