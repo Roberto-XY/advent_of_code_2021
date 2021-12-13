@@ -84,7 +84,7 @@ defmodule Day12 do
   def enumerate_paths_2(cave_system, small_cave_visited_twice?, path, current_cave, acc) do
     Map.fetch!(cave_system, current_cave)
     |> Stream.filter(fn next_cave ->
-      if small_cave?(next_cave) && small_cave_visited_twice? do
+      if small_cave?(next_cave) and small_cave_visited_twice? do
         not cave_visited?(path, next_cave)
       else
         true
