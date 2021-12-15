@@ -5,74 +5,95 @@ defmodule Day14 do
     |> parse_input()
     |> then(&%{res_1: solve_1(&1), res_2: solve_2(&1)})
     |> then(fn
-      %{res_1: 3259, res_2: "ZKAUCFUC"} -> IO.inspect("Success on #{__MODULE__}")
+      %{res_1: 3259, res_2: 3_459_174_981_021} -> IO.inspect("Success on #{__MODULE__}")
     end)
   end
 
+  @spec read_input! :: binary
   def read_input! do
     File.read!(Path.join(:code.priv_dir(:advent_of_code), "input/day_14.txt"))
   end
 
+  @type element_frequency :: %{<<_::8>> => non_neg_integer()}
+  @type polymer_pair_frequency :: %{<<_::16>> => non_neg_integer()}
+  @type insertion_rules :: %{<<_::16>> => <<_::8>>}
+
+  @spec parse_input(binary) :: {insertion_rules, polymer_pair_frequency, element_frequency}
   def parse_input(lines) do
-    [template, insertion_rules] = String.split(lines, "\n\n", trim: true)
+    [starting_polymer, insertion_rules] = String.split(lines, "\n\n", trim: true)
+
+    element_count =
+      for(<<x::binary-size(1) <- starting_polymer>>, do: x)
+      |> Enum.frequencies()
+
+    polymer_pair_frequency =
+      String.to_charlist(starting_polymer)
+      |> Stream.chunk_every(2, 1, :discard)
+      |> Stream.map(&List.to_string/1)
+      |> Enum.frequencies()
 
     insertion_rules =
       String.split(insertion_rules, "\n", trim: true)
-      |> Enum.map(fn line ->
+      |> Stream.map(fn line ->
         [pattern, insertion] = String.split(line, " -> ", trim: true)
         {pattern, insertion}
       end)
+      |> Enum.into(%{})
 
-    {template, insertion_rules}
+    {insertion_rules, polymer_pair_frequency, element_count}
   end
 
-  def solve_1({template, insertion_rules}) do
-    do_solve({template, insertion_rules}, 10)
+  @spec solve_1({insertion_rules, polymer_pair_frequency, element_frequency}) :: non_neg_integer()
+  def solve_1({insertion_rules, polymer_pair_frequency, element_frequency}) do
+    do_solve({insertion_rules, polymer_pair_frequency, element_frequency}, 10)
   end
 
-  def solve_2({template, insertion_rules}) do
-    do_solve({template, insertion_rules}, 40)
+  @spec solve_2({insertion_rules, polymer_pair_frequency, element_frequency}) :: non_neg_integer()
+  def solve_2({insertion_rules, polymer_pair_frequency, element_frequency}) do
+    do_solve({insertion_rules, polymer_pair_frequency, element_frequency}, 40)
   end
 
-  def do_solve({template, insertion_rules}, n) do
+  @spec do_solve({insertion_rules, polymer_pair_frequency, element_frequency}, non_neg_integer()) ::
+          non_neg_integer()
+  def do_solve({insertion_rules, polymer_pair_frequency, element_frequency}, n) do
+    {_, acc} =
+      Enum.reduce(
+        1..n,
+        {polymer_pair_frequency, element_frequency},
+        fn _, {polymer_pair_frequency, element_frequency} ->
+          execute_insertion_step(insertion_rules, polymer_pair_frequency, element_frequency)
+        end
+      )
+
     {least_common_count, most_common_count} =
-      Enum.reduce(1..n, template, fn _, acc ->
-        execute_insertion_step(acc, insertion_rules)
-      end)
-      |> String.to_charlist()
-      |> Enum.frequencies()
-      |> Map.values()
+      Map.values(acc)
       |> Enum.min_max()
 
     most_common_count - least_common_count
   end
 
-  @spec execute_insertion_step(<<_::16, _::_*8>>, [{<<_::16>>, binary}], binary) :: binary
-  def execute_insertion_step(_, _, acc \\ "")
+  @spec execute_insertion_step(insertion_rules, polymer_pair_frequency, element_frequency) ::
+          {polymer_pair_frequency, element_frequency}
+  def execute_insertion_step(insertion_rules, polymer_pair_frequency, element_frequency) do
+    Enum.reduce(
+      polymer_pair_frequency,
+      {%{}, element_frequency},
+      fn {<<first::binary-size(1), second::binary-size(1)>> = polymer_pair, count},
+         {new_polymer_pair_frequency, element_frequency} ->
+        case Map.get(insertion_rules, polymer_pair) do
+          nil ->
+            {new_polymer_pair_frequency, element_frequency}
 
-  def execute_insertion_step(
-        <<first::binary-size(1), second::binary-size(1)>> <> tail,
-        insertion_rules,
-        acc
-      ) do
-    insertion =
-      Stream.map(insertion_rules, fn
-        {
-          <<^first::binary-size(1), ^second::binary-size(1)>>,
-          insertion
-        } ->
-          insertion
+          insertion ->
+            new_polymer_pair_frequency =
+              Map.update(new_polymer_pair_frequency, first <> insertion, count, &(&1 + count))
+              |> Map.update(insertion <> second, count, &(&1 + count))
 
-        _ ->
-          nil
-      end)
-      |> Stream.filter(&(not is_nil(&1)))
-      |> Enum.join()
+            new_element_frequency = Map.update(element_frequency, insertion, count, &(&1 + count))
 
-    execute_insertion_step(second <> tail, insertion_rules, acc <> first <> insertion)
-  end
-
-  def execute_insertion_step(<<last::binary-size(1)>>, _, acc) do
-    acc <> last
+            {new_polymer_pair_frequency, new_element_frequency}
+        end
+      end
+    )
   end
 end
