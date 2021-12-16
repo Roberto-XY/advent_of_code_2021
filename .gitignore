@@ -26,3 +26,8 @@ advent_of_code-*.tar
 /tmp/
 
 priv/native/libcompute_core.so
+
+*/target
+*/.bsp
+.metals/
+.vscode/
