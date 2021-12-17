@@ -1,14 +1,15 @@
 defmodule Day16 do
-  @spec solve! :: String.t()
-  def solve! do
+  @spec solve!() :: String.t()
+  def solve!() do
     read_input!()
     |> parse_input()
     |> then(&%{res_1: solve_1(&1), res_2: solve_2(&1)})
     |> then(fn
-      %{res_1: 3259, res_2: 3_459_174_981_021} -> IO.inspect("Success on #{__MODULE__}")
+      %{res_1: 927, res_2: 1_725_277_876_501} -> IO.inspect("Success on #{__MODULE__}")
     end)
   end
 
+  @spec read_input!() :: binary
   def read_input!() do
     File.read!(Path.join(:code.priv_dir(:advent_of_code), "input/day_16.txt"))
   end
@@ -22,7 +23,6 @@ defmodule Day16 do
   end
 
   @type packet :: operator_packet | value_packet
-
   @type operator_packet :: %{version: integer(), operator: operator, children: [packet]}
   @type value_packet :: %{version: integer(), value: integer()}
 
@@ -51,6 +51,7 @@ defmodule Day16 do
     interpret_package(packet)
   end
 
+  @spec interpret_package(packet) :: integer()
   def interpret_package(%{operator: :sum, children: child_packets}) do
     Stream.map(child_packets, &interpret_package(&1)) |> Enum.sum()
   end
@@ -83,7 +84,7 @@ defmodule Day16 do
     value
   end
 
-  # @spec parse(<<_::64, _::_*8>>) :: packet
+  @spec parse(<<_::64, _::_*8>>) :: {binary, packet}
   def parse(bit_string)
 
   def parse(<<version::binary-size(3), @binary_four, rest::binary>>) do
@@ -98,22 +99,10 @@ defmodule Day16 do
       ) do
     version = String.to_integer(version, 2)
     type_id = String.to_integer(type_id, 2)
-    # IO.inspect(packet_bits, label: :packet_bits)
-
     packet_bits = String.to_integer(packet_bits, 2)
-    # IO.inspect(packet_bits, label: :packet_bits)
-    # IO.inspect(rest)
+
     <<packets_binary::binary-size(packet_bits), rest::binary>> = rest
-
-    {"", child_packets} =
-      Enum.reduce_while(0..packet_bits, {packets_binary, []}, fn
-        _, {"", acc} ->
-          {:halt, {"", Enum.reverse(acc)}}
-
-        _, {packets_binary, acc} ->
-          {rest, packet} = parse(packets_binary)
-          {:cont, {rest, [packet | acc]}}
-      end)
+    child_packets = parse_packet_list(packets_binary)
 
     {rest, create_packet(version, type_id, child_packets)}
   end
@@ -138,6 +127,18 @@ defmodule Day16 do
     {rest, create_packet(version, type_id, child_packets)}
   end
 
+  @spec parse_packet_list(binary, [packet()]) :: [packet()]
+  def parse_packet_list(packets_binary, acc \\ [])
+
+  def parse_packet_list("", acc) do
+    Enum.reverse(acc)
+  end
+
+  def parse_packet_list(packets_binary, acc) do
+    {rest, packet} = parse(packets_binary)
+    parse_packet_list(rest, [packet | acc])
+  end
+
   @spec parse_group(<<_::40, _::_*8>>, binary) :: {integer, binary}
   def parse_group(group, acc \\ "")
 
@@ -149,6 +150,8 @@ defmodule Day16 do
     {String.to_integer(acc <> number_part, 2), rest}
   end
 
+  @spec create_packet(integer(), 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, integer() | [packet()]) ::
+          packet()
   def create_packet(version, type_id, value) do
     case type_id do
       0 -> %{version: version, operator: :sum, children: value}
