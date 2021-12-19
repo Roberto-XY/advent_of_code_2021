@@ -1,5 +1,5 @@
 defmodule Day18 do
-  @spec solve!() :: String.t()
+  @spec solve!() :: String.rest()
   def solve!() do
     read_input!()
     |> Stream.map(&parse_input_line(String.trim(&1)))
@@ -9,70 +9,135 @@ defmodule Day18 do
     end)
   end
 
-  @spec read_input!() :: binary
   def read_input!() do
-    File.stream!(Path.join(:code.priv_dir(:advent_of_code), "input/day_17.txt"))
+    File.stream!(Path.join(:code.priv_dir(:advent_of_code), "input/day_18.txt"))
   end
 
-  @type target_area :: %{x_min: integer(), x_max: integer(), y_min: integer(), y_max: integer()}
-  @type velocity :: %{x_velocity: integer(), y_velocity: integer()}
-
-  def parse_input_line(line, stack \\ [], acc \\ [])
-
-  # def parse_input_line(
-  #       <<"[", left::binary-size(1), ",", right::binary-size(1), "]", rest::binary>>,
-  #       _stack,
-  #       acc
-  #     ) do
-  #   parse_input_line(rest, [String.to_integer(left), String.to_integer(right) | acc])
-  # end
-
-  # def parse_input_line(<<"[", left::binary-size(1), ",", rest::binary>>, acc) do
-  #   [String.to_integer(left), parse_input_line(rest, acc)]
-  # end
-
-  # def parse_input_line(<<",", right::binary-size(1), rest::binary>>, acc) do
-  #   [parse_input_line(rest, []), [String.to_integer(right), acc]]
-  # end
-
-  def parse_input_line(<<"]", rest::binary>>, [",", "[" | stack], acc) do
-    IO.inspect(acc, label: :CLOSED)
-    parse_input_line(rest, stack, Enum.reverse(acc))
+  def parse_input_line(line) do
+    {number, ""} = do_parse(line)
+    number
   end
 
-  def parse_input_line(<<"]", rest::binary>>, stack, acc) do
-    IO.inspect(stack)
-    IO.inspect(acc, label: :acc)
+  def do_parse(binary, depth \\ -1)
 
-    case Enum.split_while(stack, &(&1 != "[")) |> IO.inspect() do
-      {[right, ",", left], [_ | stack]} ->
-        parse_input_line(rest, stack, [[String.to_integer(left), String.to_integer(right)] | acc])
+  def do_parse(<<"[", rest::binary>>, depth) do
+    {left, <<",", rest::binary>>} = do_parse(rest, depth + 1)
+    {right, <<"]", rest::binary>>} = do_parse(rest, depth + 1)
+    {[left, right], rest}
+  end
 
-      {[right, ","], [_ | stack]} ->
-        parse_input_line(rest, stack, [acc, String.to_integer(right)])
+  def do_parse(<<x::binary-size(1), rest::binary>>, depth) do
+    {%{value: String.to_integer(x), depth: depth}, rest}
+  end
 
-      {[",", left], [_ | stack]} ->
-        parse_input_line(rest, stack, [String.to_integer(left), acc])
+  def solve_1(numbers) do
+    numbers
+    |> Stream.map(fn number ->
+      List.flatten(number)
+      |> Stream.with_index()
+      |> Stream.map(fn {a, b} -> {b, a} end)
+      |> Enum.into(%{})
+    end)
+    |> Enum.reduce(&add(&2, &1))
+  end
+
+  def add(a, b) do
+    a =
+      Stream.map(a, fn {_, group} -> %{group | depth: group.depth + 1} end)
+      |> Enum.to_list()
+      |> IO.inspect(label: :A)
+
+    b =
+      Stream.map(b, fn {_, group} -> %{group | depth: group.depth + 1} end)
+      |> Enum.to_list()
+      |> IO.inspect(label: :B)
+
+    new_number =
+      Stream.concat(a, b)
+      |> Stream.with_index()
+      |> Stream.map(fn {a, b} -> {b, a} end)
+      |> Enum.into(%{})
+
+    new_number |> IO.inspect(label: :new_number)
+
+    Enum.reduce_while(
+      Stream.cycle([0]),
+      new_number,
+      fn
+        _, last_number ->
+          current_number =
+            Enum.reduce_while(last_number, last_number, fn
+              {index, %{depth: depth}}, acc when depth >= 4 ->
+                {:halt, explode_at(acc, index)}
+                |> IO.inspect(label: "explode_at#{index}")
+
+              {index, %{value: value}}, acc when value >= 10 ->
+                {:halt, split_at(acc, index)}
+                |> IO.inspect(label: "split_at#{index}")
+
+              _, acc ->
+                {:cont, acc}
+            end)
+
+          if current_number == last_number do
+            {:halt, current_number}
+          else
+            {:cont, current_number}
+          end
+      end
+    )
+  end
+
+  def explode_at(number, index) when is_map(number) do
+    # IO.inspect({index, number}, label: :explode_at_INNER)
+    first = Map.fetch!(number, index)
+    second = Map.fetch!(number, index + 1)
+
+    if first.depth >= 4 and second.depth >= 4 do
+      update_existing(number, index - 1, &%{depth: &1.depth, value: &1.value + first.value})
+      |> update_existing(index + 2, &%{depth: &1.depth, value: &1.value + second.value})
+      |> Map.drop([index])
+      |> Enum.map(fn
+        {i, num} when i > index -> {i - 1, num}
+        i_num -> i_num
+      end)
+      |> Enum.into(%{})
+      |> Map.update!(index, fn _ -> %{depth: first.depth - 1, value: 0} end)
+    else
+      number
     end
   end
 
-  # def parse_input_line(<<"]", rest::binary>>, [right, ",", left, "[" | stack], acc) do
-  #   parse_input_line(rest, stack, [[String.to_integer(left), String.to_integer(right)] | acc])
-  # end
+  def split_at(number, index) do
+    # IO.inspect({index, number}, label: :split_at_INNER)
 
-  def parse_input_line(<<head::binary-size(1), rest::binary>>, stack, acc) do
-    parse_input_line(rest, [head | stack], acc)
+    elem = Map.fetch!(number, index)
+
+    if elem.value >= 10 do
+      Enum.map(number, fn
+        {i, num} when i > index -> {i + 1, num}
+        i_num -> i_num
+      end)
+      |> Enum.into(%{})
+      |> Map.put(index, %{depth: elem.depth + 1, value: floor(elem.value / 2)})
+      |> Map.put(index + 1, %{depth: elem.depth + 1, value: ceil(elem.value / 2)})
+    else
+      number
+    end
+
+    #     def split(arr, ind)
+    #   arr.insert(ind + 1, (arr[ind].real / 2.0).round + (arr[ind].imaginary + 1).i)
+    #   arr[ind] = arr[ind].real / 2 + (arr[ind].imaginary + 1).i
+    # end
   end
 
-  def parse_input_line("", stack, acc) do
-    acc
+  def update_existing(map, key, fun) do
+    case map do
+      %{^key => old} -> %{map | key => fun.(old)}
+      %{} -> map
+    end
   end
 
-  @spec solve_1(target_area) :: integer()
-  def solve_1(%{x_max: x_max, y_min: y_min} = target_area) do
-  end
-
-  @spec solve_2(target_area) :: non_neg_integer()
-  def solve_2(%{x_max: x_max, y_min: y_min} = target_area) do
+  def solve_2(x) do
   end
 end
