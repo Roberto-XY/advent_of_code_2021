@@ -62,7 +62,7 @@ defmodule Day21 do
         active_player,
         rolls_this_turn \\ [],
         roll \\ nil,
-        result_acc \\ %{}
+        dp_acc \\ %{}
       )
 
   def play_dirac_game(
@@ -70,10 +70,16 @@ defmodule Day21 do
         %Player{} = inactive_player,
         rolls_this_turn,
         roll,
-        result_acc
+        dp_acc
       )
       when is_integer(roll) and length(rolls_this_turn) < 3 do
-    play_dirac_game(active_player, inactive_player, rolls_this_turn ++ [roll], nil, result_acc)
+    play_dirac_game(
+      active_player,
+      inactive_player,
+      rolls_this_turn ++ [roll],
+      nil,
+      dp_acc
+    )
   end
 
   def play_dirac_game(
@@ -81,14 +87,16 @@ defmodule Day21 do
         %Player{} = inactive_player,
         rolls_this_turn,
         nil,
-        result_acc
+        dp_acc
       ) do
-    [
-      play_dirac_game(inactive_player, active_player, rolls_this_turn, 1, result_acc),
-      play_dirac_game(inactive_player, active_player, rolls_this_turn, 2, result_acc),
-      play_dirac_game(inactive_player, active_player, rolls_this_turn, 3, result_acc)
-    ]
-    |> Enum.reduce(&Map.merge(&2, &1, fn _, v1, v2 -> v1 + v2 end))
+    Map.get_lazy(dp_acc, {%{active_player | id: nil}, %{inactive_player | id: nil}}, fn ->
+      [
+        play_dirac_game(inactive_player, active_player, rolls_this_turn, 1, dp_acc),
+        play_dirac_game(inactive_player, active_player, rolls_this_turn, 2, dp_acc),
+        play_dirac_game(inactive_player, active_player, rolls_this_turn, 3, dp_acc)
+      ]
+      |> Enum.reduce(&Map.merge(&2, &1, fn _, v1, v2 -> v1 + v2 end))
+    end)
   end
 
   def play_dirac_game(
@@ -96,18 +104,24 @@ defmodule Day21 do
         %Player{} = inactive_player,
         rolls_this_turn,
         _,
-        result_acc
+        dp_acc
       )
       when length(rolls_this_turn) == 3 do
-    new_position = looping_add(position + Enum.sum(rolls_this_turn), @cycle_length)
+    roll_sum = Enum.sum(rolls_this_turn)
+    new_position = looping_add(position + roll_sum, @cycle_length)
     new_score = score + new_position
 
-    if new_score > 1 do
-      Map.update(result_acc, active_player.id, 1, &(&1 + 1))
+    if new_score > 3 do
+      Map.update(
+        dp_acc,
+        {%{active_player | id: nil}, %{inactive_player | id: nil}},
+        1,
+        fn win_counter -> Map.update(win_counter, active_player.id, 1, &(&1 + 1)) end
+      )
     else
       new_active_player = %{active_player | position: new_position, score: new_score}
 
-      play_dirac_game(inactive_player, new_active_player, [], nil, result_acc)
+      play_dirac_game(inactive_player, new_active_player, [], nil, dp_acc)
     end
   end
 
