@@ -1,4 +1,4 @@
-defmodule Day19 do
+defmodule Day20 do
   defmodule Grid do
     @type element :: any
     @type t :: %{optional(non_neg_integer) => %{optional(non_neg_integer) => any}}
@@ -109,7 +109,7 @@ defmodule Day19 do
   end
 
   def read_input!() do
-    File.read!(Path.join(:code.priv_dir(:advent_of_code), "input/day_19.txt"))
+    File.read!(Path.join(:code.priv_dir(:advent_of_code), "input/day_20.txt"))
   end
 
   def parse_input(lines) do
