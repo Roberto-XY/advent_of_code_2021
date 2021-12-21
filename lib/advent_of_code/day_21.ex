@@ -8,27 +8,34 @@ defmodule Day21 do
   end
 
   def read_input!() do
-    %{player1_start: 4, player2_start: 8}
+    %{player1_start: 7, player2_start: 1}
   end
 
   defmodule Player do
-    defstruct id: nil, position: 0, score: 0
+    defstruct position: 0, score: 0
   end
 
   def solve_1(%{player1_start: player1_start, player2_start: player2_start}) do
     %{losing_score: losing_score, roll_count: roll_count} =
-      play_game(%Player{id: 1, position: player1_start}, %Player{id: 2, position: player2_start})
+      play_game(%Player{position: player1_start}, %Player{position: player2_start})
 
     losing_score * roll_count
   end
 
   def solve_2(%{player1_start: player1_start, player2_start: player2_start}) do
-    %{1 => player1_wins, 2 => player2_wins} =
+    # %{
+    #   {%Player{position: ^player1_start}, %Player{position: ^player2_start}} =>
+    #     {player1_wins, player2_wins}
+    # } =
+    {counter, acc} =
       play_dirac_game(
-        %Player{id: 1, position: player1_start},
-        %Player{id: 2, position: player2_start}
+        %Player{position: player1_start},
+        %Player{position: player2_start},
+        %{}
+        # %{{%Player{position: player1_start}, %Player{position: player2_start}} => 1}
       )
-      |> IO.inspect()
+
+    IO.inspect(counter)
   end
 
   @rolls_per_turn 3
@@ -57,71 +64,65 @@ defmodule Day21 do
     end
   end
 
-  def play_dirac_game(
-        active_player,
-        active_player,
-        rolls_this_turn \\ [],
-        roll \\ nil,
-        dp_acc \\ %{}
-      )
+  @roll_count (for first_roll <- 1..3,
+                   second_roll <- 1..3,
+                   third_roll <- 1..3 do
+                 Enum.sum([first_roll, second_roll, third_roll])
+               end)
+              |> Enum.frequencies()
 
   def play_dirac_game(
-        %Player{} = active_player,
-        %Player{} = inactive_player,
-        rolls_this_turn,
-        roll,
+        active_player,
+        active_player,
         dp_acc
       )
-      when is_integer(roll) and length(rolls_this_turn) < 3 do
-    play_dirac_game(
-      active_player,
-      inactive_player,
-      rolls_this_turn ++ [roll],
-      nil,
-      dp_acc
-    )
+
+  def play_dirac_game(%Player{score: score} = active_player, %Player{} = inactive_player, _)
+      when score > 20 do
+    {{1, 0}, %{{active_player, inactive_player} => {1, 0}}}
   end
 
-  def play_dirac_game(
-        %Player{} = active_player,
-        %Player{} = inactive_player,
-        rolls_this_turn,
-        nil,
-        dp_acc
-      ) do
-    Map.get_lazy(dp_acc, {%{active_player | id: nil}, %{inactive_player | id: nil}}, fn ->
-      [
-        play_dirac_game(inactive_player, active_player, rolls_this_turn, 1, dp_acc),
-        play_dirac_game(inactive_player, active_player, rolls_this_turn, 2, dp_acc),
-        play_dirac_game(inactive_player, active_player, rolls_this_turn, 3, dp_acc)
-      ]
-      |> Enum.reduce(&Map.merge(&2, &1, fn _, v1, v2 -> v1 + v2 end))
-    end)
+  def play_dirac_game(%Player{} = active_player, %Player{score: score} = inactive_player, _)
+      when score > 20 do
+    {{0, 1}, %{{active_player, inactive_player} => {0, 1}}}
   end
 
   def play_dirac_game(
         %Player{position: position, score: score} = active_player,
         %Player{} = inactive_player,
-        rolls_this_turn,
-        _,
         dp_acc
-      )
-      when length(rolls_this_turn) == 3 do
-    roll_sum = Enum.sum(rolls_this_turn)
-    new_position = looping_add(position + roll_sum, @cycle_length)
-    new_score = score + new_position
+      ) do
+    key = {active_player, inactive_player}
 
-    if new_score > 3 do
-      Map.update(
-        dp_acc,
-        {%{active_player | id: nil}, %{inactive_player | id: nil}},
-        1,
-        fn win_counter -> Map.update(win_counter, active_player.id, 1, &(&1 + 1)) end
-      )
-    else
-      new_active_player = %{active_player | position: new_position, score: new_score}
+    case Map.get(dp_acc, key) do
+      nil ->
+        {counter, new_dp_acc} =
+          Enum.map(@roll_count, fn {roll_sum, frequency} ->
+            new_position = looping_add(position + roll_sum, @cycle_length)
+            new_score = score + new_position
+            new_active_player = %{active_player | position: new_position, score: new_score}
 
-      play_dirac_game(inactive_player, new_active_player, [], nil, dp_acc)
+            {{count2, count1}, acc} = play_dirac_game(inactive_player, new_active_player, dp_acc)
+
+            acc =
+              acc
+              |> Enum.map(fn {key, {count2, count1}} ->
+                {key, {count1 * frequency, count2 * frequency}}
+              end)
+              |> Enum.into(%{})
+
+            {{count1 * frequency, count2 * frequency}, acc}
+          end)
+          |> Enum.reduce(fn {{v11, v12}, acc1}, {{v21, v22}, acc2} ->
+            {{v11 + v21, v12 + v22},
+             Map.merge(acc1, acc2, fn _, {v11, v12}, {v21, v22} -> {v11 + v21, v12 + v22} end)}
+          end)
+
+        {counter,
+         Map.merge(dp_acc, new_dp_acc, fn _, {v11, v12}, {v21, v22} -> {v11 + v21, v12 + v22} end)}
+
+      val ->
+        val
     end
   end
 
