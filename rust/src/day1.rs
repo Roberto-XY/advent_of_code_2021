@@ -7,7 +7,7 @@ use std::{
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let path = env::current_dir()?.join("data/2022_day1.txt");
+    let path = env::current_dir()?.join("data/day1.txt");
     let acc = with_loop(BufReader::new(File::open(&path)?))?;
     let max_sum = with_closure(BufReader::new(File::open(&path)?))?;
 

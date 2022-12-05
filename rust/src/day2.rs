@@ -38,7 +38,7 @@ impl RoundResult {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let path = env::current_dir()?.join("data/2022_day2.txt");
+    let path = env::current_dir()?.join("data/day2.txt");
 
     let reader = BufReader::new(File::open(path.clone())?);
     let mut total_score_1 = 0u64;

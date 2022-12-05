@@ -9,17 +9,21 @@ edition = "2021"
 itertools = "0.10.5"
 
 [[bin]]
-name = "2022_day1"
-path = "src/2022_day1.rs"
+name = "day1"
+path = "src/day1.rs"
 
 [[bin]]
-name = "2022_day2"
-path = "src/2022_day2.rs"
+name = "day2"
+path = "src/day2.rs"
 
 [[bin]]
-name = "2022_day3"
-path = "src/2022_day3.rs"
+name = "day3"
+path = "src/day3.rs"
 
 [[bin]]
-name = "2022_day4"
-path = "src/2022_day4.rs"
+name = "day4"
+path = "src/day4.rs"
+
+[[bin]]
+name = "day5"
+path = "src/day5.rs"
