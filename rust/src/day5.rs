@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let path = env::current_dir()?.join("data/day5.txt");
-    let reader = BufReader::new(File::open(path.clone())?);
+    let reader = BufReader::new(File::open(path)?);
 
     for line_or_err in reader
         .lines()
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let path = env::current_dir()?.join("data/day5.txt");
-    let reader = BufReader::new(File::open(path.clone())?);
+    let reader = BufReader::new(File::open(path)?);
 
     for line_or_err in reader
         .lines()
