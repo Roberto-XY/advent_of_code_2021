@@ -13,12 +13,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     reader.read_to_string(&mut input)?;
     let input = input;
 
-    let mut file_sizes: HashMap<Vec<String>, u64> = HashMap::new();
-
-    let root = vec!["/".to_owned()];
+    let mut dir_sizes: HashMap<Vec<&str>, u64> = HashMap::new();
+    let root = vec!["/"];
     let mut current_dir = root.clone();
 
-    input
+    let instructions = input
         .split("$ ")
         .map(|instruction| {
             instruction
@@ -26,50 +25,45 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .filter(|part| !part.is_empty())
                 .collect::<Vec<_>>()
         })
-        .filter(|instruction| !instruction.is_empty())
-        .for_each(|instruction| {
-            let first = instruction.first().unwrap();
-            if *first == "ls" {
-                let (dir_stmts, file_stmts): (Vec<_>, Vec<_>) = instruction
-                    .into_iter()
-                    .skip(1)
-                    .partition(|&x| x.starts_with("dir "));
-                let _children = dir_stmts.into_iter().for_each(|dir_stmt| {
-                    let dir_stmt = dir_stmt.split_whitespace().collect::<Vec<_>>();
-                    let _dir_name = dir_stmt.last().unwrap();
-                });
+        .filter(|instruction| !instruction.is_empty());
 
-                file_stmts.into_iter().for_each(|file_stmt| {
-                    let file_stmt = file_stmt.split_whitespace().collect::<Vec<_>>();
-                    let _file_name = *file_stmt.last().unwrap();
-                    let file_size = file_stmt.first().unwrap().parse::<u64>().unwrap();
-                    let file_key = current_dir.clone();
-                    // file_key.push(file_name.to_owned());
+    for instruction in instructions {
+        let first = *instruction.first().ok_or("unexpected_input")?;
+        if first == "ls" {
+            let file_stmts = instruction
+                .into_iter()
+                .skip(1)
+                .filter(|&x| !x.starts_with("dir "));
 
-                    let mut current_key = vec![];
-                    for key_segment in file_key.into_iter() {
-                        current_key.push(key_segment);
-                        file_sizes
-                            .entry(current_key.clone())
-                            .and_modify(|size| *size += file_size)
-                            .or_insert(file_size);
-                    }
-                });
-            } else if *first == "cd .." {
-                current_dir.pop();
-            } else if *first == "cd /" {
-                current_dir.truncate(1);
-            } else {
-                let cd_instruction = first.split_whitespace().collect::<Vec<_>>();
-                let target_dir = *cd_instruction.last().unwrap();
-                current_dir.push(target_dir.to_owned())
-            };
-        });
+            for file_stmt in file_stmts {
+                let file_stmt = file_stmt.split_whitespace().collect::<Vec<_>>();
+                let file_size = file_stmt
+                    .first()
+                    .ok_or("unexpected_input")?
+                    .parse::<u64>()?;
+                let current_dir = current_dir.clone();
+                for dir_idx in 1..=current_dir.len() {
+                    dir_sizes
+                        .entry(current_dir[..dir_idx].to_vec())
+                        .and_modify(|size| *size += file_size)
+                        .or_insert(file_size);
+                }
+            }
+        } else if first == "cd .." {
+            current_dir.pop();
+        } else if first == "cd /" {
+            current_dir.truncate(1);
+        } else {
+            let cd_instruction = first.split_whitespace().collect::<Vec<_>>();
+            let target_dir = *cd_instruction.last().ok_or("unexpected_input")?;
+            current_dir.push(target_dir)
+        };
+    }
 
-    let res_1: u64 = file_sizes
+    let res_1: u64 = dir_sizes
         .iter()
-        .filter_map(|(_key, dir_size)| {
-            if *dir_size <= 100000 {
+        .filter_map(|(_key, &dir_size)| {
+            if dir_size <= 100000 {
                 Some(dir_size)
             } else {
                 None
@@ -78,14 +72,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         .sum();
     dbg!(res_1);
 
-    let used_space = file_sizes.get(&root).unwrap();
+    let used_space = dir_sizes.get(&root[..]).ok_or("missing filesystem root")?;
     let unused_space = 70000000 - used_space;
     let space_needed = 30000000 - unused_space;
 
-    let res_2 = file_sizes
+    let res_2 = dir_sizes
         .iter()
-        .filter_map(|(_key, dir_size)| {
-            if *dir_size >= space_needed {
+        .filter_map(|(_key, &dir_size)| {
+            if dir_size >= space_needed {
                 Some(dir_size)
             } else {
                 None
