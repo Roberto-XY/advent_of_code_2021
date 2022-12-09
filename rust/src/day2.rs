@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     dbg!(&total_score_1);
 
-    let reader = BufReader::new(File::open(path.clone())?);
+    let reader = BufReader::new(File::open(path)?);
     let mut total_score_2 = 0u64;
     for round_str in reader.lines() {
         let round_str = round_str?;

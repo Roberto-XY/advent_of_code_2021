@@ -8,7 +8,7 @@ use std::{
 fn main() -> Result<(), Box<dyn Error>> {
     let path = env::current_dir()?.join("data/day4.txt");
 
-    let reader = BufReader::new(File::open(path.clone())?);
+    let reader = BufReader::new(File::open(path)?);
 
     let mut res_1 = 0u64;
     let mut res_2 = 0u64;

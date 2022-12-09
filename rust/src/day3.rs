@@ -24,14 +24,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .map(|item| compartment_2.find(item).map(|_| item))
                         .find(|common_item| common_item.is_some())
                         .flatten()
-                        .ok_or("no common item found".into())
+                        .ok_or_else(|| "no common item found".into())
                         .map(|common_item| item_to_priority(&common_item));
                     common_item_priority
                 })
         })
         .sum::<Result<u64, _>>()?;
 
-    let reader = BufReader::new(File::open(path.clone())?);
+    let reader = BufReader::new(File::open(path)?);
     let res_2 = reader
         .lines()
         .tuples::<(_, _, _)>()
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .map(|item| rucksack_c.find(item).map(|_| item))
                         .find(|common_item| common_item.is_some())
                         .flatten()
-                        .ok_or("no common item found".into())
+                        .ok_or_else(|| "no common item found".into())
                         .map(|common_item| item_to_priority(&common_item));
                     common_item_priority
                 })
