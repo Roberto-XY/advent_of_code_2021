@@ -7,7 +7,6 @@ use std::{
     iter,
 };
 
-#[derive(Debug)]
 enum Direction {
     Up,
     Down,
